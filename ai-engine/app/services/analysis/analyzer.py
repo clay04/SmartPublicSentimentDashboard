@@ -8,12 +8,13 @@ from app.services.llm.gemini_service import llm
 from app.services.llm.groq_service import groq_llm
 from app.services.rag.retriever import get_retriever
 
+# Import response model Anda di sini
+from app.models.response_models import AnalyzeResponse 
 
 async def analyze_text(text: str):
     logger.info(f"Analyzing text: {text}")
 
     cache_key = hashlib.md5(text.encode()).hexdigest()
-
     cached = redis_client.get(cache_key)
 
     if cached:
@@ -28,7 +29,6 @@ async def analyze_text(text: str):
     ])
 
     source_document = None
-
     if docs:
         source_document = docs[0].metadata.get("source_file")
 
@@ -36,59 +36,61 @@ async def analyze_text(text: str):
 
     prompt = f"""
 You are an Indonesian government AI system.
-
-Analyze the complaint below.
+Analyze the complaint below and match it with the provided Government SOP Context.
 
 Complaint:
 {text}
 
 Government SOP Context:
 {context}
-
-Return ONLY valid JSON.
-
-{{
-  "sentiment": "positive/neutral/negative",
-  "category": "...",
-  "urgency": "low/medium/high",
-  "confidence": 0.0,
-  "recommendation": "...",
-  "regulation_context": "..."
-}}
 """
 
+    # Paksa kedua LLM untuk mematuhi skema Pydantic Anda
+    structured_gemini = llm.with_structured_output(AnalyzeResponse)
+    structured_groq = groq_llm.with_structured_output(AnalyzeResponse)
+
+    parsed_output = None
+
+    # --- PROSES LLM DENGAN FALLBACK YANG AMAN ---
     try:
-        response = llm.invoke(prompt)
+        logger.info("Sending request to Gemini...")
+        ai_response = structured_gemini.invoke(prompt)
+        # Ambil data dalam bentuk dictionary dari object Pydantic
+        parsed_output = ai_response.model_dump()
 
-    except Exception:
-        logger.warning("Gemini failed, fallback to Groq")
+    except Exception as gemini_err:
+        logger.warning(f"Gemini failed: {str(gemini_err)}. Falling back to Groq...")
+        
+        try:
+            logger.info("Sending request to Groq...")
+            ai_response = structured_groq.invoke(prompt)
+            parsed_output = ai_response.model_dump()
+        except Exception as groq_err:
+            logger.error(f"Both Gemini and Groq failed. Groq error: {str(groq_err)}")
+            # Jika Groq juga mati, parsed_output tetap None
 
-        response = groq_llm.invoke(prompt)
+    # --- PROSES INTEGRASI DATA & CACHING ---
+    if parsed_output:
+        try:
+            parsed_output["source_document"] = source_document
+            parsed_output["location"] = location
 
-    try:
-        parsed = json.loads(response.content)
+            redis_client.setex(
+                cache_key,
+                3600,
+                json.dumps(parsed_output)
+            )
+            return parsed_output
+        except Exception as e:
+            logger.error(f"Error packing final output: {str(e)}")
 
-        parsed["source_document"] = source_document
-        parsed["location"] = location
-
-        redis_client.setex(
-            cache_key,
-            3600,
-            json.dumps(parsed)
-        )
-
-        return parsed
-
-    except Exception as e:
-        logger.error(str(e))
-
-        return {
-            "sentiment": "unknown",
-            "category": "unknown",
-            "urgency": "unknown",
-            "confidence": 0.0,
-            "recommendation": "Failed to parse AI response",
-            "regulation_context": "",
-            "source_document": source_document,
-            "location": location
-        }
+    # --- FALLBACK DEFAULT (Jika Gemini & Groq sama-sama Down/Error) ---
+    return {
+        "sentiment": "unknown",
+        "category": "unknown",
+        "urgency": "unknown",
+        "recommendation": "Failed to parse AI response or both LLM models down",
+        "regulation_context": "",
+        "source_document": source_document,
+        "location": location
+    }
