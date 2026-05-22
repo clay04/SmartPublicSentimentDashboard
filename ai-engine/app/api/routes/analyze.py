@@ -10,19 +10,20 @@ router = APIRouter(
 )
 
 
-@router.post("",
-             response_model=AnalyzeResponse,
-                summary="Analyze Public Complaint",
-                description="""
-            Analyze public complaints using:
-            - Sentiment Analysis
-            - RAG Retrieval
-            - SOP Recommendation
-            - Urgency Detection
-            """
-             )
+@router.post(
+    "",
+    response_model=AnalyzeResponse,
+    summary="Analyze Public Complaint",
+    description="""
+    Analyze public complaints using:
+    - Sentiment Analysis
+    - RAG Retrieval
+    - SOP Recommendation
+    - Urgency Detection
+    """
+)
 async def analyze(payload: AnalyzeRequest):
-    result = await analyze_text(payload.text)
+    result = await analyze_text(payload.content)
 
     return result
 
@@ -32,7 +33,7 @@ async def analyze_batch(payloads: list[AnalyzeRequest]):
     results = []
 
     for payload in payloads:
-        result = await analyze_text(payload.text)
+        result = await analyze_text(payload.content)
         results.append(result)
 
     return {
