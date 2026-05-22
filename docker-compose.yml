@@ -7,18 +7,31 @@ services:
       - "6379:6379"
     restart: unless-stopped
 
+    networks:
+      - smart-network
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   scraper:
     build: ./scraper-service
     container_name: scraper-service
 
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
 
     env_file:
       - ./scraper-service/.env
 
     volumes:
       - ./scraper-service:/app
+
+    environment:
+      - PYTHONPATH=/app
 
     networks:
       - smart-network
@@ -32,11 +45,12 @@ services:
     ports:
       - "8000:8000"
 
+    depends_on:
+      redis:
+        condition: service_healthy
+
     env_file:
       - ./ai-engine/.env
-
-    depends_on:
-      - redis
 
     networks:
       - smart-network
@@ -50,11 +64,19 @@ services:
     command: python services/ai_worker.py
 
     depends_on:
-      - redis
-      - ai-engine
+      redis:
+        condition: service_healthy
+      ai-engine:
+        condition: service_started
 
     env_file:
       - ./scraper-service/.env
+
+    volumes:
+      - ./scraper-service:/app
+
+    environment:
+      - PYTHONPATH=/app
 
     networks:
       - smart-network
