@@ -23,6 +23,7 @@ router = APIRouter(
     """
 )
 async def analyze(payload: AnalyzeRequest):
+    print(payload.dict())
     result = await analyze_text(payload.content)
 
     return result
