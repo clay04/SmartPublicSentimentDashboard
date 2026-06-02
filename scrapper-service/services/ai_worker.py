@@ -21,6 +21,7 @@ BACKEND_URL = os.getenv(
     "http://backend:3000/ai/ingest"
 )
 
+print("AI Worker Started")
 
 async def process_ai_job(payload):
     async with httpx.AsyncClient(timeout=60) as client:
