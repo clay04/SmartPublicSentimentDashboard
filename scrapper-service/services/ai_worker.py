@@ -88,23 +88,27 @@ async def start_ai_worker():
     logger.info("🚀 AI Worker started")
     logger.info(f"AI_ENGINE_URL: {AI_ENGINE_URL}")
     logger.info(f"BACKEND_URL: {BACKEND_URL}")
-    
-    await asyncio.sleep(5)
-    try:
-        redis_client.ping()
-        logger.info("✅ Redis connected")
-    except Exception as e:
-        logger.error(f"❌ Redis connection failed: {e}")
-        return 
+
+    # 🔥 FIX: Redis retry loop
+    while True:
+        try:
+            redis_client.ping()
+            logger.info("✅ Redis connected")
+            break
+        except Exception as e:
+            logger.error(f"❌ Redis connection failed: {e}")
+            await asyncio.sleep(3)
 
     while True:
         try:
-            
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
+
             result = await loop.run_in_executor(
                 None,
                 lambda: redis_client.blpop(AI_QUEUE, timeout=5)
             )
+
+            logger.info(f"RAW RESULT: {result}")
 
             if result is None:
                 continue
@@ -113,13 +117,17 @@ async def start_ai_worker():
             payload = orjson.loads(data)
 
             logger.info(f"📥 Processing: {payload.get('title')}")
+
             await process_ai_job(payload)
 
         except Exception as e:
-            logger.error(f"AI Worker Error: {e}")
+            logger.exception(f"🔥 AI Worker Error: {e}")
 
         await asyncio.sleep(1)
 
 
 if __name__ == "__main__":
-    asyncio.run(start_ai_worker())
+    try:
+        asyncio.run(start_ai_worker())
+    except Exception as e:
+        logger.exception(f"🔥 Worker crashed: {e}")

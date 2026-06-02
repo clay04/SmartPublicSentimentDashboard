@@ -69,7 +69,7 @@ services:
       ai-engine:
         condition: service_started
       backend:
-        condition: service_started
+        condition: service_healthy
 
     env_file:
       - ./scraper-service/.env
@@ -109,4 +109,5 @@ services:
 
 networks:
   smart-network:
+    name: smart-network
     driver: bridge
