@@ -54,6 +54,15 @@ async def process_ai_job(payload):
 
 async def start_ai_worker():
     logger.info("🚀 AI Worker started")
+    logger.info(f"AI_ENGINE_URL: {AI_ENGINE_URL}")
+    logger.info(f"BACKEND_URL: {BACKEND_URL}")
+    
+    try:
+        redis_client.ping()
+        logger.info("✅ Redis connected")
+    except Exception as e:
+        logger.error(f"❌ Redis connection failed: {e}")
+        return 
 
     while True:
         try:
