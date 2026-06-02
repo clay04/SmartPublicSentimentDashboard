@@ -16,12 +16,21 @@ AI_ENGINE_URL = os.getenv(
     "http://ai-engine:8000/analyze"
 )
 
+BACKEND_URL = os.getenv(
+    "BACKEND_URL",
+    "http://backend:3000/ai/ingest"
+)
+
 
 async def process_ai_job(payload):
     async with httpx.AsyncClient(timeout=60) as client:
+
+        # 1. Kirim ke AI Engine
         response = await client.post(
             AI_ENGINE_URL,
-            json=payload
+            json={
+                "text": f"{payload.get('title')}\n{payload.get('content')}"
+            }
         )
 
         if response.status_code != 200:
@@ -30,8 +39,29 @@ async def process_ai_job(payload):
             )
             return None
 
-        logger.info(f"AI processed: {payload.get('keyword')}")
-        return response.json()
+        ai_result = response.json()
+
+        # 2. Gabungkan metadata + hasil AI
+        final_data = {
+            **payload,
+            **ai_result
+        }
+
+        # 3. Kirim ke backend
+        backend_res = await client.post(
+            BACKEND_URL,
+            json=final_data
+        )
+
+        if backend_res.status_code != 200:
+            logger.error(
+                f"Backend Error {backend_res.status_code}: {backend_res.text}"
+            )
+            return None
+
+        logger.info(f"AI processed & saved: {payload.get('keyword')}")
+
+        return final_data
 
 
 async def start_ai_worker():
