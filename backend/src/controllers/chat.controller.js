@@ -1,4 +1,4 @@
-import { createConversation, addMessage } from "../services/chat.service";
+import { createConversation, addMessage } from "../services/chat.service.js";
 
 export const startCOnversation = async (req, res) => {
     try {

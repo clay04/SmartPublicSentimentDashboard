@@ -1,4 +1,4 @@
-import { SaveAIREsult } from "../services/ai.service";
+import { SaveAIREsult } from "../services/ai.service.js";
 
 export const ingestAI = async (req, res) => {
     try {

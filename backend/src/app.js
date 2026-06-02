@@ -1,8 +1,8 @@
 import express from "express"
 import cors from "cors"
 
-import aiRoutes from "./routes/ai.routes"
-import chatRoutes from "./routes/chat.routes"
+import aiRoutes from "./routes/ai.routes.js"
+import chatRoutes from "./routes/chat.routes.js"
 
 const app = express();
 

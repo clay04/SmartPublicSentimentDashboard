@@ -1,5 +1,5 @@
-import Chat from "../models/chat.model";
-import supabase from "../config/supabase";
+import Chat from "../models/chat.model.js";
+import supabase from "../config/supabase.js";
 
 export const createConversation = async (user_id) => {
     const { data, error } = await supabase
