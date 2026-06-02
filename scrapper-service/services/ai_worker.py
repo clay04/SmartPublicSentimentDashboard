@@ -122,8 +122,4 @@ async def start_ai_worker():
 
 
 if __name__ == "__main__":
-    while True:
-        try:
-            asyncio.run(start_ai_worker())
-        except Exception as e:
-            logger.exception(f"🔥 Worker crashed, restarting...: {e}")
+    asyncio.run(start_ai_worker())
