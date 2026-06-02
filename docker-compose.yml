@@ -68,12 +68,14 @@ services:
         condition: service_healthy
       ai-engine:
         condition: service_started
+      backend:
+        condition: service_started
 
     env_file:
       - ./scraper-service/.env
 
-    volumes:
-      - ./scraper-service:/app
+    # volumes:
+    #   - ./scraper-service:/app
 
     environment:
       - PYTHONPATH=/app
