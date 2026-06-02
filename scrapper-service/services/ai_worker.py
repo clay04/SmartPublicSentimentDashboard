@@ -25,7 +25,7 @@ BACKEND_URL = os.getenv(
 async def process_ai_job(payload):
     async with httpx.AsyncClient(timeout=60) as client:
 
-        # 1. Kirim ke AI Engine
+        # 1. AI Engine
         response = await client.post(
             AI_ENGINE_URL,
             json={
@@ -41,17 +41,26 @@ async def process_ai_job(payload):
 
         ai_result = response.json()
 
-        # 2. Gabungkan metadata + hasil AI
         final_data = {
             **payload,
             **ai_result
         }
 
-        # 3. Kirim ke backend
-        backend_res = await client.post(
-            BACKEND_URL,
-            json=final_data
-        )
+        # 🔥 DEBUG
+        logger.info(f"Sending to backend: {final_data}")
+
+        try:
+            backend_res = await client.post(
+                BACKEND_URL,
+                json=final_data
+            )
+
+            logger.info(f"Backend status: {backend_res.status_code}")
+            logger.info(f"Backend response: {backend_res.text}")
+
+        except Exception as e:
+            logger.error(f"Backend connection error: {e}")
+            return None
 
         if backend_res.status_code != 200:
             logger.error(
