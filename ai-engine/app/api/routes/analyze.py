@@ -24,8 +24,9 @@ router = APIRouter(
 )
 async def analyze(payload: AnalyzeRequest):
     print(payload.dict())
-    result = await analyze_text(payload.content)
-
+    text = f"{payload.title}\n{payload.content}"  # ← gabungkan title + content
+    result = await analyze_text(text)
+    print(result)
     return result
 
 

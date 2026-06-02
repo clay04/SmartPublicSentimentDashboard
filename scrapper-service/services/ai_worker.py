@@ -21,7 +21,10 @@ async def process_ai_job(payload):
         response = await client.post(
             AI_ENGINE_URL,
             json={
-                "content": f"{payload.get('title', '')}\n{payload.get('content', '')}"
+                "title": payload.get("title", ""),
+                "content": payload.get("content", ""),
+                "keyword": payload.get("keyword", ""),
+                "source": payload.get("source", "")
             }
         )
 
