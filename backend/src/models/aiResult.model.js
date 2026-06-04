@@ -7,9 +7,16 @@ const AIResultSchema = new mongoose.Schema({
     source: String,
 
     sentiment: String,
-    summary: String,
+    category: String,
+
     urgency: String,
+
     recommendation: String,
+
+    regulation_context: String,
+    source_document: String,
+
+    location: String,
 
     created_at: {
         type: Date,
