@@ -14,6 +14,19 @@ app.use((req, res, next) => {
     next();
 });
 
+app.get("/", (req, res) => {
+    res.json({
+        status: "ok",
+        service: "backend"
+    });
+});
+
+app.get("/health", (req, res) => {
+    res.json({
+        status: "healthy"
+    });
+});
+
 app.use("/ai", aiRoutes);
 app.use("/chat", chatRoutes);
 
