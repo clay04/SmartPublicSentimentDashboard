@@ -52,6 +52,9 @@ services:
     env_file:
       - ./ai-engine/.env
 
+    volumes:
+      - ai-engine-cache:/root/.cache/huggingface
+
     networks:
       - smart-network
 
@@ -117,3 +120,6 @@ networks:
   smart-network:
     name: smart-network
     driver: bridge
+
+volumes:
+  ai-engine-cache:
