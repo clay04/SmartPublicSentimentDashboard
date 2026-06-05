@@ -1,6 +1,6 @@
 import asyncio
 
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from scraper.news_scraper import NewsScraper
 
@@ -10,7 +10,7 @@ from services.sender import process_batch
 from utils.logger import logger
 
 
-scheduler = BackgroundScheduler()
+scheduler = AsyncIOScheduler()
 
 
 async def scrape_job():
@@ -43,10 +43,13 @@ async def scrape_job():
 def start_scheduler():
 
     scheduler.add_job(
-        lambda: asyncio.run(scrape_job()),
+        scrape_job,
         "interval",
         minutes=10,
-        id="scrape_job"
+        id="scrape_job",
+        max_instances=1,
+        coalesce=True,
+        misfire_grace_time=300
     )
 
     scheduler.start()
