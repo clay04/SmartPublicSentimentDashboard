@@ -17,6 +17,8 @@ const AIResultSchema = new mongoose.Schema({
     source_document: String,
 
     location: String,
+    latitude: Number,
+    longitude: Number,
 
     created_at: {
         type: Date,

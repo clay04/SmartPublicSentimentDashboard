@@ -3,13 +3,11 @@ import json
 
 from app.core.logger import logger
 from app.core.redis_client import redis_client
-from app.services.geocoding.geocode_service import extract_location
 from app.services.llm.gemini_service import llm
 from app.services.llm.groq_service import groq_llm
 from app.services.rag.retriever import get_retriever
-
-# Import response model Anda di sini
 from app.models.response_models import AnalyzeResponse 
+from app.services.geocoding.osm_services import geocode_location
 
 async def analyze_text(text: str):
     logger.info(f"Analyzing text: {text}")
@@ -32,18 +30,29 @@ async def analyze_text(text: str):
     if docs:
         source_document = docs[0].metadata.get("source_file")
 
-    location = extract_location(text)
-
     prompt = f"""
-You are an Indonesian government AI system.
-Analyze the complaint below and match it with the provided Government SOP Context.
+    You are an Indonesian government AI system.
 
-Complaint:
-{text}
+    Analyze the complaint.
 
-Government SOP Context:
-{context}
-"""
+    Return:
+
+    - sentiment
+    - category
+    - urgency
+    - recommendation
+    - regulation_context
+    - location
+
+    Location must be the city, district, regency, province,
+    or place mentioned in the complaint.
+
+    Complaint:
+    {text}
+
+    Government SOP Context:
+    {context}
+    """
 
     # Paksa kedua LLM untuk mematuhi skema Pydantic Anda
     structured_gemini = llm.with_structured_output(AnalyzeResponse)
@@ -68,21 +77,45 @@ Government SOP Context:
         except Exception as groq_err:
             logger.error(f"Both Gemini and Groq failed. Groq error: {str(groq_err)}")
             # Jika Groq juga mati, parsed_output tetap None
+    
 
     # --- PROSES INTEGRASI DATA & CACHING ---
     if parsed_output:
+
+        location = parsed_output.get("location")
+
+        coordinates = await geocode_location(location)
+        
+        logger.info(
+            f"Location extracted: {location}"
+        )
+
+        logger.info(
+            f"Coordinates: {coordinates}"
+        )
+
         try:
             parsed_output["source_document"] = source_document
-            parsed_output["location"] = location
+
+            if coordinates:
+                parsed_output["latitude"] = coordinates["latitude"]
+                parsed_output["longitude"] = coordinates["longitude"]
+            else:
+                parsed_output["latitude"] = None
+                parsed_output["longitude"] = None
 
             redis_client.setex(
                 cache_key,
                 3600,
                 json.dumps(parsed_output)
             )
+
             return parsed_output
+
         except Exception as e:
-            logger.error(f"Error packing final output: {str(e)}")
+            logger.error(
+                f"Error packing final output: {str(e)}"
+            )
 
     # --- FALLBACK DEFAULT (Jika Gemini & Groq sama-sama Down/Error) ---
     return {
@@ -92,5 +125,7 @@ Government SOP Context:
         "recommendation": "Failed to parse AI response or both LLM models down",
         "regulation_context": "",
         "source_document": source_document,
-        "location": location
+        "location": None,
+        "latitude": None,
+        "longitude": None
     }
