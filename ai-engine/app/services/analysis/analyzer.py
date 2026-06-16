@@ -55,8 +55,8 @@ async def analyze_text(text: str):
     {context}
     """
 
-    structured_master = local_llm_master.with_structured_output(LLMAnalysisOutput, method='json_mode')
-    structured_fallback = local_llm_fallback.with_structured_output(LLMAnalysisOutput, method='json_mode')
+    structured_master = local_llm_master.with_structured_output(LLMAnalysisOutput)
+    structured_fallback = local_llm_fallback.with_structured_output(LLMAnalysisOutput)
 
     parsed_output = None
 
