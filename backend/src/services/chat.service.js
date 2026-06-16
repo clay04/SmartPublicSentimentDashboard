@@ -1,16 +1,19 @@
 import Chat from "../models/chat.model.js";
-import supabase from "../config/supabase.js";
+import prisma from "../config/prisma.js";
 
 export const createConversation = async (user_id) => {
-    const { data, error } = await supabase
-    .from("conversation")
-    .insert([{ user_id }])
-    .select()
-    .single();
+    try {
+        // 🌟 SEKARANG PAKAI PRISMA! Jauh lebih clean dan aman
+        const data = await prisma.conversation.create({
+            data: {
+                user_id: user_id, // atau cukup tulis user_id jika nama field-nya sama
+            },
+        });
 
-    if (error) throw error;
-
-    return data;
+        return data;
+    } catch (error) {
+        throw error;
+    }
 };
 
 export const addMessage = async (conversation_id, message) => {
