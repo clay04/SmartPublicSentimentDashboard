@@ -5,7 +5,8 @@ WORKDIR /app
 COPY requirements.txt .
 
 RUN pip install uv
-RUN uv pip install --system -r requirements.txt
+RUN uv pip install --system --index-url https://download.pytorch.org/whl/cpu torch==2.3.1+cpu
+RUN uv pip install --system --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
 
 COPY . .
 
