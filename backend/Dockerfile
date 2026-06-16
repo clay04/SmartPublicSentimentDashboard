@@ -10,6 +10,8 @@ RUN npm install
 # copy source code
 COPY . .
 
+RUN npx prisma generate
+
 # expose port
 EXPOSE 3000
 
