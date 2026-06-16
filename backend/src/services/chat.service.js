@@ -24,7 +24,7 @@ export const addMessage = async (conversation_id, message) => {
     }
 
     chat.messages.push(message);
-    await chat.save();
+    await chat.save(); 
 
     return chat;
 }

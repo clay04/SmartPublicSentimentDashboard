@@ -3,10 +3,11 @@ import json
 
 from app.core.logger import logger
 from app.core.redis_client import redis_client
-from app.services.llm.gemini_service import llm
-from app.services.llm.groq_service import groq_llm
+# from app.services.llm.gemini_service import llm
+# from app.services.llm.groq_service import groq_llm
+from app.services.llm.lokalllm_service import local_llm_master, local_llm_fallback
 from app.services.rag.retriever import get_retriever
-from app.models.response_models import AnalyzeResponse 
+from app.models.response_models import AnalyzeResponse, LLMAnalysisOutput
 from app.services.geocoding.osm_services import geocode_location
 
 async def analyze_text(text: str):
@@ -54,68 +55,52 @@ async def analyze_text(text: str):
     {context}
     """
 
-    # Paksa kedua LLM untuk mematuhi skema Pydantic Anda
-    structured_gemini = llm.with_structured_output(AnalyzeResponse)
-    structured_groq = groq_llm.with_structured_output(AnalyzeResponse)
+    structured_master = local_llm_master.with_structured_output(LLMAnalysisOutput)
+    structured_fallback = local_llm_fallback.with_structured_output(LLMAnalysisOutput)
 
     parsed_output = None
 
     # --- PROSES LLM DENGAN FALLBACK YANG AMAN ---
     try:
-        logger.info("Sending request to Gemini...")
-        ai_response = structured_gemini.invoke(prompt)
-        # Ambil data dalam bentuk dictionary dari object Pydantic
+        logger.info("Sending request to Local Qwen 3B")
+        ai_response = structured_master.invoke(prompt)
         parsed_output = ai_response.model_dump()
 
-    except Exception as gemini_err:
-        logger.warning(f"Gemini failed: {str(gemini_err)}. Falling back to Groq...")
+    except Exception as master_err:
+        logger.warning(f"Gemini failed: {str(master_err)}. Falling back to Qwen 1.5B")
         
         try:
-            logger.info("Sending request to Groq...")
-            ai_response = structured_groq.invoke(prompt)
+            logger.info("Sending request to Local Qwen 1.5B")
+            ai_response = structured_fallback.invoke(prompt)
             parsed_output = ai_response.model_dump()
         except Exception as groq_err:
-            logger.error(f"Both Gemini and Groq failed. Groq error: {str(groq_err)}")
-            # Jika Groq juga mati, parsed_output tetap None
+            logger.error(f"Both Local LLMs Failed. Error: {str(groq_err)}")
     
-
     # --- PROSES INTEGRASI DATA & CACHING ---
     if parsed_output:
-
         location = parsed_output.get("location")
-
-        coordinates = await geocode_location(location)
+        coordinates = None
         
-        logger.info(
-            f"Location extracted: {location}"
-        )
-
-        logger.info(
-            f"Coordinates: {coordinates}"
-        )
+        if location and location.strip():
+            try:
+                coordinates = await geocode_location(location)
+            except Exception as geo_err:
+                logger.error(f"Geocoding failed: {str(geo_err)}")
 
         try:
-            parsed_output["source_document"] = source_document
-
-            if coordinates:
-                parsed_output["latitude"] = coordinates["latitude"]
-                parsed_output["longitude"] = coordinates["longitude"]
-            else:
-                parsed_output["latitude"] = None
-                parsed_output["longitude"] = None
-
-            redis_client.setex(
-                cache_key,
-                3600,
-                json.dumps(parsed_output)
+            final_response = AnalyzeResponse(
+                **parsed_output,
+                source_document=source_document,
+                latitude=coordinates.get("latitude") if coordinates else None,
+                longitude=coordinates.get("longitude") if coordinates else None
             )
 
-            return parsed_output
+            final_data = final_response.model_dump()
+            redis_client.setex(cache_key, 3600, json.dumps(final_data))
+            return final_data
 
         except Exception as e:
-            logger.error(
-                f"Error packing final output: {str(e)}"
-            )
+            logger.error(f"Error packing final output: {str(e)}")
 
     # --- FALLBACK DEFAULT (Jika Gemini & Groq sama-sama Down/Error) ---
     return {

@@ -7,6 +7,7 @@ langchain-community
 langchain-google-genai
 langchain-groq
 langchain-text-splitters
+langchain-ollama
 
 sentence-transformers
 

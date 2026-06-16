@@ -10,3 +10,5 @@ REDIS_HOST = os.getenv("REDIS_HOST")
 REDIS_PORT = int(os.getenv("REDIS_PORT"))
 
 MONGODB_URI = os.getenv("MONGODB_URI")
+
+LOCAL_LLM_BASE_URL = os.getenv("LOCAL_LLM_BASE_URL")
