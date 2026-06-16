@@ -62,7 +62,7 @@ async def analyze_text(text: str):
 
     # --- PROSES LLM DENGAN FALLBACK YANG AMAN ---
     try:
-        logger.info("Sending request to Local Qwen 3B")
+        logger.info("Sending request to Local Qwen 1.5B")
         ai_response = structured_master.invoke(prompt)
         parsed_output = ai_response.model_dump()
 
@@ -70,7 +70,7 @@ async def analyze_text(text: str):
         logger.warning(f"Gemini failed: {str(master_err)}. Falling back to Qwen 1.5B")
         
         try:
-            logger.info("Sending request to Local Qwen 1.5B")
+            logger.info("Sending request to Local Qwen 3B")
             ai_response = structured_fallback.invoke(prompt)
             parsed_output = ai_response.model_dump()
         except Exception as groq_err:
