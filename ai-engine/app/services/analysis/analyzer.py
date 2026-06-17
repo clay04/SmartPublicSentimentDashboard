@@ -62,8 +62,8 @@ Complaint:
 Government SOP Context:
 {context}
 """
-    logger.info(f"Context length (chars): {len(prompt)}")
-    logger.info(f"Context length (approx tokens): {len(prompt) // 4}")
+    logger.info(f"Prompt length (chars): {len(prompt)}")
+    logger.info(f"Prompt length (approx tokens): {len(prompt) // 4}")
     
     structured_master = local_llm_master.with_structured_output(LLMAnalysisOutput)
     structured_fallback = local_llm_fallback.with_structured_output(LLMAnalysisOutput)
@@ -74,6 +74,7 @@ Government SOP Context:
     try:
         logger.info("Sending request to Qwen3 1.7B (master)")
         ai_response = structured_master.invoke(prompt)
+        logger.info(f"AI Response: {ai_response}")
         if ai_response is None:
             raise ValueError("Master LLM returned None")
         parsed_output = ai_response.model_dump()
@@ -84,6 +85,7 @@ Government SOP Context:
         try:
             logger.info("Sending request to Qwen2.5 3B (fallback)")
             ai_response = structured_fallback.invoke(prompt)
+            logger.info(f"AI Response: {ai_response}")
             if ai_response is None:
                 raise ValueError("Fallback LLM returned None")
             parsed_output = ai_response.model_dump()
