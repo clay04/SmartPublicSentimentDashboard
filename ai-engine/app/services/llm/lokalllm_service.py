@@ -7,7 +7,8 @@ local_llm_master = ChatOllama(
     temperature=0,
     format="json",
     stream=False,
-    num_predict=512,
+    num_predict=256,
+    num_ctx=2048
 )
 
 local_llm_fallback = ChatOllama(
@@ -16,5 +17,6 @@ local_llm_fallback = ChatOllama(
     temperature=0,
     format="json",
     stream=False,
-    num_predict=512,
+    num_predict=256,
+    num_ctx=2048
 )

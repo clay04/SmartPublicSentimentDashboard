@@ -62,7 +62,9 @@ Complaint:
 Government SOP Context:
 {context}
 """
-
+    logger.info(f"Context length (chars): {len(prompt)}")
+    logger.info(f"Context length (approx tokens): {len(prompt) // 4}")
+    
     structured_master = local_llm_master.with_structured_output(LLMAnalysisOutput)
     structured_fallback = local_llm_fallback.with_structured_output(LLMAnalysisOutput)
 

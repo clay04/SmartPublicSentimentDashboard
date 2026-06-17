@@ -16,11 +16,8 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:3000/ai/ingest")
 
 
 async def process_ai_job(payload):
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=150) as client:
 
-        # =============================
-        # 🔁 RETRY AI ENGINE
-        # =============================
         ai_result = None
 
         for i in range(5):
@@ -51,17 +48,11 @@ async def process_ai_job(payload):
             logger.error("❌ AI Engine failed after retries")
             return None
 
-        # =============================
-        # 🔁 MERGE DATA
-        # =============================
         final_data = {
             **payload,
             **ai_result
         }
 
-        # =============================
-        # 🔁 RETRY BACKEND
-        # =============================
         for i in range(5):
             try:
                 backend_res = await client.post(
