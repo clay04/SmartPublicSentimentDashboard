@@ -61,8 +61,8 @@ Complaint:
     logger.info(f"Prompt length (chars): {len(prompt)}")
     logger.info(f"Prompt length (approx tokens): {len(prompt) // 4}")
     
-    structured_master = local_llm_master.with_structured_output(LLMAnalysisOutput)
-    structured_fallback = local_llm_fallback.with_structured_output(LLMAnalysisOutput)
+    structured_master = local_llm_master.with_structured_output(LLMAnalysisOutput, include_raw=True)
+    structured_fallback = local_llm_fallback.with_structured_output(LLMAnalysisOutput, include_raw=True)
 
     parsed_output = None
 
@@ -70,7 +70,7 @@ Complaint:
     try:
         logger.info("Sending request to Qwen2 3B (master)")
         ai_response = structured_master.invoke(prompt)
-        logger.info(f"AI Response: {ai_response}")
+        logger.info(f"AI Response RAW: {ai_response}")
         if ai_response is None:
             raise ValueError("Master LLM returned None")
         parsed_output = ai_response.model_dump()
