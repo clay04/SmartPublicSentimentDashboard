@@ -73,7 +73,11 @@ Complaint:
         logger.info(f"AI Response RAW: {ai_response}")
         if ai_response is None:
             raise ValueError("Master LLM returned None")
-        parsed_output = ai_response.model_dump()
+        parsed = ai_response.get("parsed")
+        if parsed is None:
+            raise ValueError("No structured output")
+        
+        parsed_output = parsed.model_dump()
 
     except Exception as master_err:
         logger.warning(f"Master LLM failed: {str(master_err)}. Falling back to Qwen3 1.7B")
@@ -84,7 +88,11 @@ Complaint:
             logger.info(f"AI Response: {ai_response}")
             if ai_response is None:
                 raise ValueError("Fallback LLM returned None")
-            parsed_output = ai_response.model_dump()
+            parsed = ai_response.get("parsed")
+            if parsed is None:
+                raise ValueError("No structured output")
+            
+            parsed_output = parsed.model_dump()
 
         except Exception as fallback_err:
             logger.error(f"Both LLMs failed. Error: {str(fallback_err)}")
