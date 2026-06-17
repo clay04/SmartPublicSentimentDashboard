@@ -3,14 +3,14 @@ from app.core.config import LOCAL_LLM_BASE_URL
 
 local_llm_master = ChatOllama(
     base_url=LOCAL_LLM_BASE_URL,
-    model="qwen3:1.7b",
+    model="qwen2.5:3b",
     temperature=0,
     stream=False,
 )
 
 local_llm_fallback = ChatOllama(
     base_url=LOCAL_LLM_BASE_URL,
-    model="qwen2.5:3b",
+    model="qwen3:1.7b",
     temperature=0,
     stream=False,
 )

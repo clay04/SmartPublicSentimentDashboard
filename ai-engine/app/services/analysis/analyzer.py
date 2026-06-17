@@ -10,11 +10,6 @@ from app.services.rag.retriever import get_retriever
 from app.models.response_models import AnalyzeResponse, LLMAnalysisOutput
 from app.services.geocoding.osm_services import geocode_location
 
-logger.info("Testing raw Ollama response")
-
-raw = local_llm_master.invoke("Halo apa kabar?")
-logger.info(f"RAW = {raw}")
-
 def clean_text(text: str) -> str:
     """Hapus HTML tags, decode entities, normalize whitespace."""
     text = re.sub(r'<[^>]+>', '', text)
@@ -23,7 +18,7 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 
-async def analyze_text(text: str):
+async def analyze_text(text: str):    
     # Bersihkan HTML sebelum apapun
     text = clean_text(text)
     logger.info(f"Analyzing text: {text}")
@@ -76,7 +71,7 @@ Government SOP Context:
 
     # --- LLM DENGAN FALLBACK ---
     try:
-        logger.info("Sending request to Qwen3 1.7B (master)")
+        logger.info("Sending request to Qwen2 3B (master)")
         ai_response = structured_master.invoke(prompt)
         logger.info(f"AI Response: {ai_response}")
         if ai_response is None:
@@ -84,10 +79,10 @@ Government SOP Context:
         parsed_output = ai_response.model_dump()
 
     except Exception as master_err:
-        logger.warning(f"Master LLM failed: {str(master_err)}. Falling back to Qwen2.5 3B")
+        logger.warning(f"Master LLM failed: {str(master_err)}. Falling back to Qwen3 1.7B")
 
         try:
-            logger.info("Sending request to Qwen2.5 3B (fallback)")
+            logger.info("Sending request to Qwen3 1.7B (fallback)")
             ai_response = structured_fallback.invoke(prompt)
             logger.info(f"AI Response: {ai_response}")
             if ai_response is None:
