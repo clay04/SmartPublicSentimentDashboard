@@ -10,6 +10,10 @@ from app.services.rag.retriever import get_retriever
 from app.models.response_models import AnalyzeResponse, LLMAnalysisOutput
 from app.services.geocoding.osm_services import geocode_location
 
+logger.info("Testing raw Ollama response")
+
+raw = local_llm_master.invoke("Halo apa kabar?")
+logger.info(f"RAW = {raw}")
 
 def clean_text(text: str) -> str:
     """Hapus HTML tags, decode entities, normalize whitespace."""
