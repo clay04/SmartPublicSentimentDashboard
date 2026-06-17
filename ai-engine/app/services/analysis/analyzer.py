@@ -1,16 +1,25 @@
 import hashlib
 import json
+import re
+from html import unescape
 
 from app.core.logger import logger
 from app.core.redis_client import redis_client
-# from app.services.llm.gemini_service import llm
-# from app.services.llm.groq_service import groq_llm
 from app.services.llm.lokalllm_service import local_llm_master, local_llm_fallback
 from app.services.rag.retriever import get_retriever
 from app.models.response_models import AnalyzeResponse, LLMAnalysisOutput
 from app.services.geocoding.osm_services import geocode_location
 
+
+def clean_text(text: str) -> str:
+    text = re.sub(r'<[^>]+>', '', text)
+    text = unescape(text)
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
+
+
 async def analyze_text(text: str):
+    text = clean_text(text)
     logger.info(f"Analyzing text: {text}")
 
     cache_key = hashlib.md5(text.encode()).hexdigest()
@@ -19,41 +28,36 @@ async def analyze_text(text: str):
     if cached:
         logger.info("Cache hit")
         return json.loads(cached)
-    
+
     retriever = get_retriever()
     docs = retriever.invoke(text)
 
-    context = "\n\n".join([
-        doc.page_content for doc in docs
-    ])
+    context = "\n\n".join([doc.page_content for doc in docs])
 
     source_document = None
     if docs:
         source_document = docs[0].metadata.get("source_file")
 
-    prompt = f"""
-    You are an Indonesian government AI system.
+    prompt = f"""/no_think
+You are an Indonesian government AI system.
+Analyze the complaint and return ONLY valid JSON. No comments, no explanation.
 
-    Analyze the complaint.
+Rules:
+- sentiment must be exactly one of: positive, neutral, negative (lowercase)
+- category must be a single string, not an array
+- urgency must be exactly one of: low, medium, high (lowercase)
+- recommendation: provide a short action recommendation in Indonesian, max 2 sentences
+- regulation_context: use empty string "" if not available, no comments
+- location: city, district, or province mentioned, or null if none
+- All values must be strings, no arrays, no null except location
+- You MUST include ALL fields: sentiment, category, urgency, recommendation, regulation_context, location
 
-    Return:
+Complaint:
+{text}
 
-    - sentiment
-    - category
-    - urgency
-    - recommendation
-    - regulation_context
-    - location
-
-    Location must be the city, district, regency, province,
-    or place mentioned in the complaint.
-
-    Complaint:
-    {text}
-
-    Government SOP Context:
-    {context}
-    """
+Government SOP Context:
+{context}
+"""
 
     structured_master = local_llm_master.with_structured_output(LLMAnalysisOutput)
     structured_fallback = local_llm_fallback.with_structured_output(LLMAnalysisOutput)
@@ -62,26 +66,34 @@ async def analyze_text(text: str):
 
     # --- PROSES LLM DENGAN FALLBACK YANG AMAN ---
     try:
-        logger.info("Sending request to Local Qwen 1.5B")
+        logger.info("Sending request to Qwen3 1.7B (master)")
         ai_response = structured_master.invoke(prompt)
+        if ai_response is None:
+            raise ValueError("Master LLM returned None")
         parsed_output = ai_response.model_dump()
 
     except Exception as master_err:
-        logger.warning(f"Gemini failed: {str(master_err)}. Falling back to Qwen 1.5B")
-        
+        logger.warning(f"Master LLM failed: {str(master_err)}. Falling back to Qwen2.5 3B")
+
         try:
-            logger.info("Sending request to Local Qwen 3B")
+            logger.info("Sending request to Qwen2.5 3B (fallback)")
             ai_response = structured_fallback.invoke(prompt)
+            if ai_response is None:
+                raise ValueError("Fallback LLM returned None")
             parsed_output = ai_response.model_dump()
-        except Exception as groq_err:
-            logger.error(f"Both Local LLMs Failed. Error: {str(groq_err)}")
-    
+
+        except Exception as fallback_err:
+            logger.error(f"Both LLMs failed. Error: {str(fallback_err)}")
+
     # --- PROSES INTEGRASI DATA & CACHING ---
     if parsed_output:
         location = parsed_output.get("location")
+        if location:
+            location = location.strip().title()  # "sigi" → "Sigi"
+            parsed_output["location"] = location
+
         coordinates = None
-        
-        if location and location.strip():
+        if location:
             try:
                 coordinates = await geocode_location(location)
             except Exception as geo_err:
@@ -102,7 +114,7 @@ async def analyze_text(text: str):
         except Exception as e:
             logger.error(f"Error packing final output: {str(e)}")
 
-    # --- FALLBACK DEFAULT (Jika Gemini & Groq sama-sama Down/Error) ---
+    # --- FALLBACK DEFAULT ---
     return {
         "sentiment": "unknown",
         "category": "unknown",

@@ -1,16 +1,29 @@
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
-# Skema KETAT untuk LLM (Hanya data yang perlu diperas dari teks)
 class LLMAnalysisOutput(BaseModel):
-    sentiment: str = Field(description="Sentimen dari teks: positive, neutral, atau negative")
-    category: str = Field(description="Kategori aduan, contoh: infrastruktur, kesehatan, dll")
-    urgency: str = Field(description="Tingkat urgensi: low, medium, atau high")
-    recommendation: str = Field(description="Rekomendasi tindakan berdasarkan dokumen SOP")
-    regulation_context: str = Field(description="Kutipan regulasi/SOP yang relevan dari konteks")
-    location: Optional[str] = Field(default=None, description="Nama kota, kecamatan, provinsi, atau tempat spesifik yang disebutkan")
+    sentiment: Literal["positive", "neutral", "negative"] = Field(
+        description="Sentimen dari teks: positive, neutral, atau negative"
+    )
+    category: str = Field(
+        description="Kategori aduan, contoh: infrastruktur, kesehatan, bencana_alam, dll"
+    )
+    urgency: Literal["low", "medium", "high"] = Field(
+        description="Tingkat urgensi: low, medium, atau high"
+    )
+    recommendation: str = Field(
+        default="",
+        description="Rekomendasi tindakan singkat dalam Bahasa Indonesia, maksimal 2 kalimat"
+    )
+    regulation_context: str = Field(
+        default="",
+        description="Kutipan regulasi/SOP yang relevan, kosongkan jika tidak ada"
+    )
+    location: Optional[str] = Field(
+        default=None,
+        description="Nama kota, kecamatan, provinsi, atau tempat spesifik yang disebutkan"
+    )
 
-# Skema Lengkap untuk Response API & Cache Redis
 class AnalyzeResponse(LLMAnalysisOutput):
     source_document: Optional[str] = None
     latitude: Optional[float] = None
