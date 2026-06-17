@@ -24,7 +24,13 @@ class LLMAnalysisOutput(BaseModel):
         description="Nama kota, kecamatan, provinsi, atau tempat spesifik yang disebutkan"
     )
 
-class AnalyzeResponse(LLMAnalysisOutput):
+class AnalyzeResponse(BaseModel):
+    sentiment: str
+    category: str
+    urgency: str
+    recommendation: str
+    regulation_context: str
+    location: Optional[str] = None
     source_document: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None

@@ -1,5 +1,4 @@
 from fastapi import APIRouter
-
 from app.models.request_models import AnalyzeRequest
 from app.models.response_models import AnalyzeResponse
 from app.services.analysis.analyzer import analyze_text
@@ -8,7 +7,6 @@ router = APIRouter(
     prefix="/analyze",
     tags=["Analyze"]
 )
-
 
 @router.post(
     "",
@@ -23,21 +21,16 @@ router = APIRouter(
     """
 )
 async def analyze(payload: AnalyzeRequest):
-    print(payload.dict())
-    text = f"{payload.title}\n{payload.content}"  # ← gabungkan title + content
+    text = f"{payload.title}\n{payload.content}"
     result = await analyze_text(text)
-    print(result)
     return result
 
 
 @router.post("/batch")
 async def analyze_batch(payloads: list[AnalyzeRequest]):
     results = []
-
     for payload in payloads:
-        result = await analyze_text(payload.content)
+        text = f"{payload.title}\n{payload.content}"
+        result = await analyze_text(text)
         results.append(result)
-
-    return {
-        "results": results
-    }
+    return {"results": results}

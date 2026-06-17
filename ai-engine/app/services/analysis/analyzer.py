@@ -12,6 +12,7 @@ from app.services.geocoding.osm_services import geocode_location
 
 
 def clean_text(text: str) -> str:
+    """Hapus HTML tags, decode entities, normalize whitespace."""
     text = re.sub(r'<[^>]+>', '', text)
     text = unescape(text)
     text = re.sub(r'\s+', ' ', text)
@@ -19,6 +20,7 @@ def clean_text(text: str) -> str:
 
 
 async def analyze_text(text: str):
+    # Bersihkan HTML sebelum apapun
     text = clean_text(text)
     logger.info(f"Analyzing text: {text}")
 
@@ -31,8 +33,10 @@ async def analyze_text(text: str):
 
     retriever = get_retriever()
     docs = retriever.invoke(text)
-
     context = "\n\n".join([doc.page_content for doc in docs])
+    logger.info(f"Docs retrieved: {len(docs)}")
+    logger.info(f"Context length (chars): {len(context)}")
+    logger.info(f"Context length (approx tokens): {len(context) // 4}")
 
     source_document = None
     if docs:
@@ -64,7 +68,7 @@ Government SOP Context:
 
     parsed_output = None
 
-    # --- PROSES LLM DENGAN FALLBACK YANG AMAN ---
+    # --- LLM DENGAN FALLBACK ---
     try:
         logger.info("Sending request to Qwen3 1.7B (master)")
         ai_response = structured_master.invoke(prompt)
@@ -85,17 +89,17 @@ Government SOP Context:
         except Exception as fallback_err:
             logger.error(f"Both LLMs failed. Error: {str(fallback_err)}")
 
-    # --- PROSES INTEGRASI DATA & CACHING ---
+    # --- INTEGRASI DATA & CACHING ---
     if parsed_output:
+        # Normalize location capitalization
         location = parsed_output.get("location")
-        if location:
-            location = location.strip().title()  # "sigi" → "Sigi"
-            parsed_output["location"] = location
+        if location and location.strip():
+            parsed_output["location"] = location.strip().title()
 
         coordinates = None
-        if location:
+        if parsed_output.get("location"):
             try:
-                coordinates = await geocode_location(location)
+                coordinates = await geocode_location(parsed_output["location"])
             except Exception as geo_err:
                 logger.error(f"Geocoding failed: {str(geo_err)}")
 
@@ -106,7 +110,6 @@ Government SOP Context:
                 latitude=coordinates.get("latitude") if coordinates else None,
                 longitude=coordinates.get("longitude") if coordinates else None
             )
-
             final_data = final_response.model_dump()
             redis_client.setex(cache_key, 3600, json.dumps(final_data))
             return final_data
@@ -114,15 +117,15 @@ Government SOP Context:
         except Exception as e:
             logger.error(f"Error packing final output: {str(e)}")
 
-    # --- FALLBACK DEFAULT ---
-    return {
-        "sentiment": "unknown",
-        "category": "unknown",
-        "urgency": "unknown",
-        "recommendation": "Failed to parse AI response or both LLM models down",
-        "regulation_context": "",
-        "source_document": source_document,
-        "location": None,
-        "latitude": None,
-        "longitude": None
-    }
+    # --- FALLBACK DEFAULT — "unknown" aman karena AnalyzeResponse pakai str biasa ---
+    return AnalyzeResponse(
+        sentiment="unknown",
+        category="unknown",
+        urgency="unknown",
+        recommendation="Failed to parse AI response or both LLM models down",
+        regulation_context="",
+        source_document=source_document,
+        location=None,
+        latitude=None,
+        longitude=None
+    ).model_dump()
