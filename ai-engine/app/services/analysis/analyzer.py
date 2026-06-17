@@ -6,7 +6,7 @@ from html import unescape
 from app.core.logger import logger
 from app.core.redis_client import redis_client
 from app.services.llm.lokalllm_service import local_llm_master, local_llm_fallback
-from app.services.rag.retriever import get_retriever
+# from app.services.rag.retriever import get_retriever
 from app.models.response_models import AnalyzeResponse, LLMAnalysisOutput
 from app.services.geocoding.osm_services import geocode_location
 
@@ -30,16 +30,16 @@ async def analyze_text(text: str):
         logger.info("Cache hit")
         return json.loads(cached)
 
-    retriever = get_retriever()
-    docs = retriever.invoke(text)
-    context = "\n\n".join([doc.page_content for doc in docs])
-    logger.info(f"Docs retrieved: {len(docs)}")
-    logger.info(f"Context length (chars): {len(context)}")
-    logger.info(f"Context length (approx tokens): {len(context) // 4}")
+    # retriever = get_retriever()
+    # docs = retriever.invoke(text)
+    # context = "\n\n".join([doc.page_content for doc in docs])
+    # logger.info(f"Docs retrieved: {len(docs)}")
+    # logger.info(f"Context length (chars): {len(context)}")
+    # logger.info(f"Context length (approx tokens): {len(context) // 4}")
 
     source_document = None
-    if docs:
-        source_document = docs[0].metadata.get("source_file")
+    # if docs:
+    #     source_document = docs[0].metadata.get("source_file")
 
     prompt = f"""/no_think
 You are an Indonesian government AI system.
@@ -57,9 +57,6 @@ Rules:
 
 Complaint:
 {text}
-
-Government SOP Context:
-{context}
 """
     logger.info(f"Prompt length (chars): {len(prompt)}")
     logger.info(f"Prompt length (approx tokens): {len(prompt) // 4}")
