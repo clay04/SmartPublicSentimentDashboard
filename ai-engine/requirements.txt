@@ -9,6 +9,7 @@ langchain==0.2.16
 langchain-community==0.2.16
 langchain-google-genai==1.0.10
 langchain-groq==0.1.9
+langchain-openai==0.1.25
 langchain-text-splitters==0.2.4
 langchain-ollama==0.1.3
 

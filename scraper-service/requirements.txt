@@ -16,4 +16,6 @@ pydantic
 
 feedparser
 beautifulsoup4
+trafilatura
+googlenewsdecoder
 lxml

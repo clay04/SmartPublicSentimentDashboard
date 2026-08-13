@@ -1,48 +1,18 @@
 import hashlib
 import json
 import os
+from services.queue_service import redis_client
 
-SEEN_FILE = "storage/seen_posts.json"
-
-
-def load_seen():
-
-    if not os.path.exists(SEEN_FILE):
-        return set()
-
-    try:
-
-        with open(SEEN_FILE, "r") as f:
-
-            content = f.read().strip()
-
-            if not content:
-                return set()
-
-            return set(json.loads(content))
-
-    except Exception:
-        return set()
+DEFAULT_TTL = 14 * 24 * 60 * 60
 
 
-def save_seen(seen):
+def is_duplicate(text: str, ttl: int = DEFAULT_TTL) -> bool:
+    if not text:
+        return False
 
-    with open(SEEN_FILE, "w") as f:
-        json.dump(list(seen), f)
+    hash_id = hashlib.md5(text.encode("utf-8")).hexdigest()
+    redis_key = f"seen:{hash_id}"
 
+    is_new = redis_client.set(redis_key, "1", nx=True, ex=ttl)
 
-seen_posts = load_seen()
-
-
-def is_duplicate(text: str):
-
-    hash_id = hashlib.md5(text.encode()).hexdigest()
-
-    if hash_id in seen_posts:
-        return True
-
-    seen_posts.add(hash_id)
-
-    save_seen(seen_posts)
-
-    return False
+    return not is_new

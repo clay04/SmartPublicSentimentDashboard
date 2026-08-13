@@ -19,9 +19,9 @@ class LLMAnalysisOutput(BaseModel):
         default="",
         description="Kutipan regulasi/SOP yang relevan, kosongkan jika tidak ada"
     )
-    location: Optional[str] = Field(
-        default=None,
-        description="Nama kota, kecamatan, provinsi, atau tempat spesifik yang disebutkan"
+    location: str = Field(
+        default="",
+        description="Nama kota, kecamatan, provinsi, atau tempat spesifik yang disebutkan. Gunakan string kosong \"\" jika tidak ada"
     )
 
 class AnalyzeResponse(BaseModel):

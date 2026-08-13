@@ -5,7 +5,12 @@ from html import unescape
 
 from app.core.logger import logger
 from app.core.redis_client import redis_client
-from app.services.llm.lokalllm_service import local_llm_master, local_llm_fallback
+# from app.services.llm.lokalllm_service import local_llm_master, local_llm_fallback
+# from app.services.llm.gemini_service import geminiLlm
+# from app.services.llm.groq_service import groq_llm
+# from app.services.llm.openrouter_service import openrouter_master, openrouter_fallback
+from app.services.llm.nvidia_service import nvidia_analyzer
+from app.services.llm.groq_analyzer_service import groq_analyzer
 # from app.services.rag.retriever import get_retriever
 from app.models.response_models import AnalyzeResponse, LLMAnalysisOutput
 from app.services.geocoding.osm_services import geocode_location
@@ -55,54 +60,59 @@ Rules:
 - All values must be strings, no arrays, no null except location
 - You MUST include ALL fields: sentiment, category, urgency, recommendation, regulation_context, location
 
+Schema:
+
+{{
+  "sentiment": "positive|neutral|negative",
+  "category": "string",
+  "urgency": "low|medium|high",
+  "recommendation": "string",
+  "regulation_context": "string",
+  "location": "string"
+}}
+
 Complaint:
 {text}
 """
     logger.info(f"Prompt length (chars): {len(prompt)}")
     logger.info(f"Prompt length (approx tokens): {len(prompt) // 4}")
     
-    structured_master = local_llm_master.with_structured_output(LLMAnalysisOutput, include_raw=True)
-    structured_fallback = local_llm_fallback.with_structured_output(LLMAnalysisOutput, include_raw=True)
+    # For Local LLM
+    # structured_master = local_llm_master.with_structured_output(LLMAnalysisOutput, include_raw=True)
+    # structured_fallback = local_llm_fallback.with_structured_output(LLMAnalysisOutput, include_raw=True)
+
+    structured_master = nvidia_analyzer.with_structured_output(LLMAnalysisOutput)
+    structured_fallback = groq_analyzer.with_structured_output(LLMAnalysisOutput)
 
     parsed_output = None
 
-    # --- LLM DENGAN FALLBACK ---
     try:
-        logger.info("Sending request to Qwen2 3B (master)")
-        ai_response = structured_master.invoke(prompt)
+        logger.info("Sending request to Gemma 4 31B (Master)")
+        ai_response = await structured_master.ainvoke(prompt)
         logger.info(f"AI Response RAW: {ai_response}")
         if ai_response is None:
             raise ValueError("Master LLM returned None")
-        parsed = ai_response.get("parsed")
-        if parsed is None:
-            raise ValueError("No structured output")
         
-        parsed_output = parsed.model_dump()
+        parsed_output = ai_response.model_dump()
 
     except Exception as master_err:
-        logger.warning(f"Master LLM failed: {str(master_err)}. Falling back to Qwen3 1.7B")
+        logger.warning(f"Master LLM failed: {str(master_err)}. Falling back to Gemma 4 26B")
 
         try:
-            logger.info("Sending request to Qwen3 1.7B (fallback)")
-            ai_response = structured_fallback.invoke(prompt)
+            logger.info("Sending request to Gemma 4 26B (Fallback)")
+            ai_response = await structured_fallback.ainvoke(prompt)
             logger.info(f"AI Response: {ai_response}")
             if ai_response is None:
                 raise ValueError("Fallback LLM returned None")
-            parsed = ai_response.get("parsed")
-            if parsed is None:
-                raise ValueError("No structured output")
             
-            parsed_output = parsed.model_dump()
+            parsed_output = ai_response.model_dump()
 
         except Exception as fallback_err:
             logger.error(f"Both LLMs failed. Error: {str(fallback_err)}")
 
-    # --- INTEGRASI DATA & CACHING ---
     if parsed_output:
-        # Normalize location capitalization
-        location = parsed_output.get("location")
-        if location and location.strip():
-            parsed_output["location"] = location.strip().title()
+        location_str = (parsed_output.get("location") or "").strip()
+        parsed_output["location"] = location_str.title() if location_str else None
 
         coordinates = None
         if parsed_output.get("location"):
@@ -125,7 +135,6 @@ Complaint:
         except Exception as e:
             logger.error(f"Error packing final output: {str(e)}")
 
-    # --- FALLBACK DEFAULT — "unknown" aman karena AnalyzeResponse pakai str biasa ---
     return AnalyzeResponse(
         sentiment="unknown",
         category="unknown",

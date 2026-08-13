@@ -4,7 +4,7 @@ import { findUserByUsername, createUser } from '../services/auth.service.js'
 
 export const SignUp = async (req, res) => {
     try {
-        const { email, password, name } = req.body;
+        const { username, password, name } = req.body;
 
         const existingUser = await findUserByUsername(username);
         if (existingUser) {
@@ -12,14 +12,14 @@ export const SignUp = async (req, res) => {
         }
 
         const hashedPassword = await argon2.hash(password);
-        const newUser = await createUser(email, name, hashedPassword);
+        const newUser = await createUser(username, name, hashedPassword);
 
         res.status(201).json({
             message: "Register Succes",
             user: {id: newUser.id, username: newUser.username, name:newUser.name}
         });
     } catch (error) {
-        res.status(500).json({ error: message });
+        res.status(500).json({ error: error.message });
     }
 };
 
@@ -27,9 +27,14 @@ export const SignIn = async (req, res) => {
     try {
         const {username, password} = req.body;
 
-        const user = findUserByUsername(username);
+        const user = await findUserByUsername(username);
         if (!user) {
             return res.status(400).json({Message: "Wrong Email or Password"});
+        }
+
+        const validPassword = await argon2.verify(user.password, password);
+        if (!validPassword) {
+            return res.status(400).json({ message: "Wrong Email or Password" });
         }
 
         const token = jwt.sign(

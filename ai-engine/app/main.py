@@ -3,6 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.routes.analyze import router as analyze_router
+from app.api.routes.chat import router as chat_router
+
 from app.core.logger import logger
 from app.services.rag.ingest import ensure_vector_store
 
@@ -66,6 +68,7 @@ app = FastAPI(
 )
 
 app.include_router(analyze_router)
+app.include_router(chat_router)
 
 
 @app.get("/")

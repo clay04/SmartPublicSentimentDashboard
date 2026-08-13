@@ -4,6 +4,7 @@ import cors from "cors"
 import aiRoutes from "./routes/ai.routes.js"
 import chatRoutes from "./routes/chat.routes.js"
 import authRoutes from "./routes/auth.routes.js"
+import newsRoutes from "./routes/news.routes.js"
 
 const app = express();
 
@@ -31,5 +32,6 @@ app.get("/health", (req, res) => {
 app.use("/auth", authRoutes)
 app.use("/ai", aiRoutes);
 app.use("/chat", chatRoutes);
+app.use("/news", newsRoutes);
 
 export default app;

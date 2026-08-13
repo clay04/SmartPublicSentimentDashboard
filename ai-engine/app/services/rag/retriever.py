@@ -27,4 +27,4 @@ def get_retriever():
             allow_dangerous_deserialization=True
         )
 
-    return _vectorstore.as_retriever(search_kwargs={"k": 3})
+    return _vectorstore.as_retriever(search_kwargs={"score_threshold": 0.8, "k": 3})

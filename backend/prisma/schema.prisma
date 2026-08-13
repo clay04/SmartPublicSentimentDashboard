@@ -23,11 +23,9 @@ model User {
 
 model Conversation {
   id         Int      @id @default(autoincrement()) // atau String @id @default(uuid()) jika di Supabase pakai UUID
-  user_id    String   // Sesuaikan tipe datanya (String/Int) dengan yang ada di database Supabase kamu
+  user_id    Int
   createdAt  DateTime @default(now())
 
-  // Jika nama tabel di Supabase kamu huruf kecil semua ("conversation"), 
-  // tambahkan @@map di bawah ini biar Prisma gak nyari tabel dengan huruf kapital "Conversation"
   @@map("conversation") 
 }
 
