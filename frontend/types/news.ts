@@ -31,11 +31,19 @@ export interface PaginatedNewsResponse {
 }
 
 export interface NewsQueryParams {
+  page?: number;
+  limit?: number;
+
+  search?: string;
+  keyword?: string;
+
+  category?: string;
+  location?: string;
+  sentiment?: string;
+  urgency?: string;
+
   sw_lat?: number;
   sw_lng?: number;
   ne_lat?: number;
   ne_lng?: number;
-  search?: string;
-  page?: number;
-  limit?: number;
 }
