@@ -6,11 +6,11 @@ from html import unescape
 from app.core.logger import logger
 from app.core.redis_client import redis_client
 # from app.services.llm.lokalllm_service import local_llm_master, local_llm_fallback
-# from app.services.llm.gemini_service import geminiLlm
+from app.services.llm.gemini_service import get_gemini_llm
 # from app.services.llm.groq_service import groq_llm
 # from app.services.llm.openrouter_service import openrouter_master, openrouter_fallback
-from app.services.llm.nvidia_service import nvidia_analyzer
-from app.services.llm.groq_analyzer_service import groq_analyzer
+# from app.services.llm.nvidia_service import nvidia_analyzer
+from app.services.llm.groq_analyzer_service import get_groq_llm
 # from app.services.rag.retriever import get_retriever
 from app.models.response_models import AnalyzeResponse, LLMAnalysisOutput
 from app.services.geocoding.osm_services import geocode_location
@@ -81,13 +81,16 @@ Complaint:
     # structured_master = local_llm_master.with_structured_output(LLMAnalysisOutput, include_raw=True)
     # structured_fallback = local_llm_fallback.with_structured_output(LLMAnalysisOutput, include_raw=True)
 
-    structured_master = nvidia_analyzer.with_structured_output(LLMAnalysisOutput)
-    structured_fallback = groq_analyzer.with_structured_output(LLMAnalysisOutput)
+    master_llm = await get_gemini_llm()
+    fallback_llm = await get_groq_llm()
+
+    structured_master = master_llm.with_structured_output(LLMAnalysisOutput)
+    structured_fallback = fallback_llm.with_structured_output(LLMAnalysisOutput)
 
     parsed_output = None
 
     try:
-        logger.info("Sending request to Gemma 4 31B (Master)")
+        logger.info("Sending request to Gemini (Master)")
         ai_response = await structured_master.ainvoke(prompt)
         logger.info(f"AI Response RAW: {ai_response}")
         if ai_response is None:
@@ -96,10 +99,10 @@ Complaint:
         parsed_output = ai_response.model_dump()
 
     except Exception as master_err:
-        logger.warning(f"Master LLM failed: {str(master_err)}. Falling back to Gemma 4 26B")
+        logger.warning(f"Master LLM failed: {str(master_err)}. Falling back to Groq")
 
         try:
-            logger.info("Sending request to Gemma 4 26B (Fallback)")
+            logger.info("Sending request to Groq (Fallback)")
             ai_response = await structured_fallback.ainvoke(prompt)
             logger.info(f"AI Response: {ai_response}")
             if ai_response is None:

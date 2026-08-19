@@ -1,7 +1,7 @@
 from app.core.logger import logger
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from app.services.rag.retriever import get_retriever
-from app.services.llm.gemini_service import geminiLlm
+from app.services.llm.gemini_service import get_gemini_llm
 from app.services.llm.groq_service import groq_llm
 
 PROMPT = """
@@ -59,7 +59,7 @@ def sentiment_chat(question: str, chat_history: list[dict] = None, news_context:
     messages = _create_messages(question, context, news_context_str, chat_history)
 
     try:
-        response = geminiLlm.invoke(messages)
+        response = get_gemini_llm.invoke(messages)
         return {
             "status": "success",
             "answer": response.content,
