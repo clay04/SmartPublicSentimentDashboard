@@ -39,10 +39,12 @@ export const fetchNewsFromDB = async ({
     };
   }
 
-  const searchTerm = keyword || search;
+  const searchTerm =
+  keyword?.trim() ||
+  search?.trim();
 
-  if (searchTerm?.trim()) {
-    const safeSearch = escapeRegex(searchTerm.trim());
+  if (searchTerm) {
+    const safeSearch = escapeRegex(searchTerm);
 
     query.$or = [
       {
