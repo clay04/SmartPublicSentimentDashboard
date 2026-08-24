@@ -5,7 +5,7 @@ from app.utils.rotator import AsyncRotator
 
 gemini_instances = [
     ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
+        model="gemini-3.6-flash",
         google_api_key=key,
         temperature=0.2,
         max_retries=1,

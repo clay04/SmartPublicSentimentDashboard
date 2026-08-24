@@ -1,49 +1,157 @@
-import { createConversation, addMessage, getChatHistory, callAiEngine } from "../services/chat.service.js";
-import { getRelatedNewsContext } from "../services/getRelatedNews.service.js";
+import {
+    createConversation,
+    addMessage,
+    getChatHistory,
+    callAiEngine
+} from "../services/chat.service.js";
+
+import {
+    getRelatedNewsContext
+} from "../services/getRelatedNews.service.js";
+
 
 export const startConversation = async (req, res) => {
     try {
-        // Ambil user_id dari token yang sudah terverifikasi (auth middleware)
+
         const user_id = req.user.id;
+
         const convo = await createConversation(user_id);
+
         res.json(convo);
+
     } catch (err) {
-        res.status(500).json({ error: err.message });
+
+        console.error("❌ startConversation error:", err);
+
+        res.status(500).json({
+            error: err.message
+        });
     }
 };
 
-export const sendMessage = async (req, res) => {
-    try {
-        const { conversation_id, text } = req.body;
 
-        // Validasi conversation_id dimiliki oleh user yang login
-        if (!conversation_id || !text) {
-            return res.status(400).json({ error: "conversation_id and text are required" });
+export const sendMessage = async (req, res) => {
+
+    try {
+
+        const {
+            conversation_id,
+            text
+        } = req.body;
+
+
+        // ============================================
+        // 1. VALIDASI REQUEST
+        // ============================================
+
+        if (!conversation_id || !text?.trim()) {
+
+            return res.status(400).json({
+                error: "conversation_id and text are required"
+            });
+
         }
 
-        // 1. Simpan pesan user ke MongoDB
-        await addMessage(conversation_id, { role: "user", text });
 
-        // 2. Ambil history chat untuk dikirim ke AI
-        const chatHistory = await getChatHistory(conversation_id);
+        // ============================================
+        // 2. SIMPAN PESAN USER
+        // ============================================
 
-        const newsContext = await getRelatedNewsContext(text);
+        await addMessage(
+            conversation_id,
+            {
+                role: "user",
+                text: text.trim()
+            }
+        );
 
-        // 3. Panggil AI Engine
-        const aiResponse = await callAiEngine(text, chatHistory, newsContext);
 
-        // 4. Simpan jawaban AI ke MongoDB
-        await addMessage(conversation_id, { role: "assistant", text: aiResponse.answer });
+        // ============================================
+        // 3. AMBIL CHAT HISTORY
+        // ============================================
 
-        // 5. Kirim respons ke frontend
-        res.json({
+        const chatHistory =
+            await getChatHistory(conversation_id);
+
+
+        // ============================================
+        // 4. AMBIL BERITA TERKAIT
+        // ============================================
+
+        const newsContext =
+            await getRelatedNewsContext(text);
+
+
+        console.log(
+            "📰 News context:",
+            newsContext
+        );
+
+
+        // ============================================
+        // 5. PANGGIL AI ENGINE
+        // ============================================
+
+        const aiResponse =
+            await callAiEngine(
+                text,
+                chatHistory,
+                newsContext
+            );
+
+
+        console.log(
+            "🤖 AI response:",
+            aiResponse
+        );
+
+
+        // ============================================
+        // 6. SIMPAN JAWABAN AI
+        // ============================================
+
+        await addMessage(
+            conversation_id,
+            {
+                role: "assistant",
+                text: aiResponse.answer
+            }
+        );
+
+
+        // ============================================
+        // 7. KIRIM RESPONSE KE FRONTEND
+        // ============================================
+
+        return res.json({
+
             status: "success",
+
             answer: aiResponse.answer,
-            source_document: aiResponse.source_document,
-            model_used: aiResponse.model_used
+
+            source_document:
+                aiResponse.source_document ?? null,
+
+            model_used:
+                aiResponse.model_used ?? null,
+
+            // 🔥 PENTING UNTUK MAP NAVIGATION
+            map_action:
+                aiResponse.map_action ?? null
+
         });
 
+
     } catch (err) {
-        res.status(500).json({ error: err.message });
+
+        console.error(
+            "❌ sendMessage error:",
+            err
+        );
+
+        return res.status(500).json({
+            error: err.message
+        });
+
     }
 };

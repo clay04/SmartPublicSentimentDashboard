@@ -5,7 +5,7 @@ from app.utils.rotator import AsyncRotator
 
 groq_instances = [
     ChatGroq(
-        model_name="llama-3.3-70b-versatile",
+        model_name="openai/gpt-oss-20b",
         groq_api_key=key,
         temperature=0.1,
         max_retries=1,
