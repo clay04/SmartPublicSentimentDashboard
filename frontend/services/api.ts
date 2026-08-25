@@ -1,8 +1,8 @@
 import axios from "axios";
 import { LoginPayload, RegisterPayload, AuthResponse } from "@/types/auth";
 import { AIResultNews, NewsQueryParams, PaginatedNewsResponse } from "@/types/news";
+import { ChatResponse, ConversationResponse } from "@/types/chat";
 
-// Tentukan Base URL berdasarkan environment (Browser vs Node/SSR)
 const getBaseUrl = () => {
   if (typeof window !== "undefined") {
     return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
@@ -60,6 +60,31 @@ export const newsApi = {
     console.log("📤 Params:", params);
     
     const response = await API.get<PaginatedNewsResponse>("/news/getnews", { params });
+    return response.data;
+  },
+};
+
+export const chatApi = {
+  createConversation: async (): Promise<ConversationResponse> => {
+    const response = await API.post<ConversationResponse>(
+      "/chat/start"
+    );
+
+    return response.data;
+  },
+
+  sendMessage: async (
+    conversationId: number,
+    text: string
+  ): Promise<ChatResponse> => {
+    const response = await API.post<ChatResponse>(
+      "/chat/message",
+      {
+        conversation_id: conversationId,
+        text,
+      }
+    );
+
     return response.data;
   },
 };
